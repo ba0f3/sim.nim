@@ -1,12 +1,15 @@
 import parsecfg, tables, strutils, strformat
 
 proc camelCaseToSnakeCase(s: string): string =
+  var first = true
   for c in s:
     if c.isUpperAscii():
-      result.add('_')
+      if not first:
+        result.add('_')
       result.add(c.toLowerAscii())
     else:
       result.add(c)
+    first = false
 
 proc convert[T](s: string): T =
   when T is int:
