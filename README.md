@@ -12,6 +12,8 @@ Supported types:
 - nested object
 - seq (seq of those type above)
 
+**NOTE: config sections and keys must use snake case**
+
 you can define a field with seq of objects, each object has itsown section in config. the key name of `seq` is the list of objects' name, for example:
 ```ini
 students = "student1,student2"
@@ -34,7 +36,7 @@ nimble  install sim
 
 Usage
 -----
-
+config.ini:
 ```ini
 name = "Nim 101"
 year = 2019
@@ -47,7 +49,7 @@ age = 18
 name = Peter
 age = 20
 ```
-
+foo.nim:
 ```nim
 import sim
 
