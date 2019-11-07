@@ -1,6 +1,6 @@
 import parsecfg, tables, strutils, strformat
 
-proc camelCaseToSnakeCase(s: string): string =
+proc `!`(s: string): string {.compileTime.} =
   var first = true
   for c in s:
     if c.isUpperAscii():
@@ -47,8 +47,7 @@ proc getValue[T](cfg: Config, value: var T, section, key: string)
 proc getValue[T](cfg: Config, t: typedesc[T], section, key: string): T =
   getValue(cfg, result, section, key)
 
-proc getValue[T](cfg: Config, value: var T, section, key: string) =
-  var key = camelCaseToSnakeCase(key)
+proc getValue[T](cfg: Config, value: var T, section, key: string) {.compileTime.} =
 
   if section.len != 0 and not cfg.hasKey(section):
     raise newException(KeyError, &"Section `{section}` not found")
@@ -70,7 +69,7 @@ proc getValue[T](cfg: Config, value: var T, section, key: string) =
         value.add(convert[value[0].type](item))
   elif T is object:
     for k, v in value.fieldPairs():
-      cfg.getValue(v, key, k)
+      cfg.getValue(v, key, !k)
   else:
     value = convert[T](v)
 
@@ -78,4 +77,4 @@ proc to*[T](filename: string): T =
   ## Load config from file and convert it to an object
   let cfg = loadConfig(filename)
   for key, value in result.fieldPairs():
-    cfg.getValue(value, "", key)
+    cfg.getValue(value, "", !key)
