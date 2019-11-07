@@ -49,24 +49,30 @@ proc getValue[T](cfg: Config, t: typedesc[T], section, key: string): T =
 
 proc getValue[T](cfg: Config, value: var T, section, key: string) {.compileTime.} =
 
-  if section.len != 0 and not cfg.hasKey(section):
-    raise newException(KeyError, &"Section `{section}` not found")
-
+  if not cfg.hasKey(section):
+    if section.len == 0:
+      raise newException(KeyError, &"Key `{key}` not found in top level")
+    else:
+      raise newException(KeyError, &"Section `{section}` not found")
+  let v = cfg.getSectionValue(section, key)
   when T isnot object:
     if not cfg[section].hasKey(key):
       if section.len == 0:
         raise newException(KeyError, &"Key `{key}` not found")
       else:
         raise newException(KeyError, &"Key `{key}` not found in section `{section}`")
-  let v = cfg.getSectionValue(section, key)
+
   #echo section, "[", key, "] => ", v
   when T is seq:
     let items = v.split(',')
     for item in items:
-      when value[0].type is object:
-        value.add(getValue(cfg, value[0].type, "", item))
-      else:
-        value.add(convert[value[0].type](item))
+        when value[0].type is object:
+          value.add(getValue(cfg, value[0].type, "", item))
+        elif value[0].type is string:
+          value.add(convert[value[0].type](item))
+        else:
+          if item.len > 0:
+            value.add(convert[value[0].type](item))
   elif T is object:
     for k, v in value.fieldPairs():
       cfg.getValue(v, key, !k)
