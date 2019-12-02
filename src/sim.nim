@@ -16,6 +16,10 @@ proc convert[T](s: string): T =
     result = parseInt(s)
   elif T is uint:
     result = parseInt(s).uint
+  elif T is int64:
+    result = parseInt(s).int64
+  elif T is uint64:
+    result = parseInt(s).uint64
   elif T is int32:
     result = parseInt(s).int32
   elif T is uint32:
