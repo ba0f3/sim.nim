@@ -1,4 +1,12 @@
 import parsecfg, tables, strutils, strformat
+import macros except `!`
+
+type
+  KeyNotFoundException* = object of KeyError
+  SectionNotFoundException* = object of KeyError
+
+
+template value*(x: untyped) {.pragma.}
 
 proc `!`(s: string): string {.compileTime.} =
   var first = true
@@ -48,23 +56,21 @@ proc convert[T](s: string): T =
 
 proc getValue[T](cfg: Config, value: var T, section, key: string)
 
-proc getValue[T](cfg: Config, t: typedesc[T], section, key: string): T =
-  getValue(cfg, result, section, key)
+proc getValue[T](cfg: Config, t: typedesc[T], section, key: string): T = getValue(cfg, result, section, key)
 
 proc getValue[T](cfg: Config, value: var T, section, key: string) {.compileTime.} =
-
   if not cfg.hasKey(section):
     if section.len == 0:
-      raise newException(KeyError, &"Key `{key}` not found in top level")
+      raise newException(KeyNotFoundException, &"Key `{key}` not found in top level")
     else:
-      raise newException(KeyError, &"Section `{section}` not found")
+      raise newException(SectionNotFoundException, &"Section `{section}` not found")
   let v = cfg.getSectionValue(section, key)
   when T isnot object:
     if not cfg[section].hasKey(key):
       if section.len == 0:
-        raise newException(KeyError, &"Key `{key}` not found")
+        raise newException(KeyNotFoundException, &"Key `{key}` not found")
       else:
-        raise newException(KeyError, &"Key `{key}` not found in section `{section}`")
+        raise newException(KeyNotFoundException, &"Key `{key}` not found in section `{section}`")
 
   #echo section, "[", key, "] => ", v
   when T is seq:
@@ -86,5 +92,12 @@ proc getValue[T](cfg: Config, value: var T, section, key: string) {.compileTime.
 proc to*[T](filename: string): T =
   ## Load config from file and convert it to an object
   let cfg = loadConfig(filename)
-  for key, value in result.fieldPairs():
-    cfg.getValue(value, "", !key)
+  for k, v in result.fieldPairs():
+    try:
+      cfg.getValue(v, "", !k)
+    except KeyNotFoundException:
+      when v.hasCustomPragma(value):
+        v = v.getCustomPragmaVal(value)
+      else:
+        raise
+
