@@ -73,12 +73,15 @@ proc getValue[T](cfg: Config, value: var T, section, key: string) {.compileTime.
         raise newException(KeyNotFoundException, &"Key `{key}` not found in section `{section}`")
   when T is seq:
     var children: seq[string]
-    let len = v.len
-    if len > 0 and v[len-1] == '*':
-      let prefix = v[0..len-2]
-      for key in cfg.keys:
-        if key.startsWith(prefix):
-          children.add(key)
+    when value[0].type is object:
+      let len = v.len
+      if len > 0 and v[len-1] == '*':
+        let prefix = v[0..len-2]
+        for key in cfg.keys:
+          if key.startsWith(prefix):
+            children.add(key)
+      else:
+        children = v.split(',')
     else:
       children = v.split(',')
     for child in children:
