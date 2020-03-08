@@ -1,4 +1,4 @@
-import parsecfg, tables, strutils, strformat
+import parsecfg, tables, strutils, strformat, pegs
 import macros except `!`
 
 type
@@ -71,18 +71,24 @@ proc getValue[T](cfg: Config, value: var T, section, key: string) {.compileTime.
         raise newException(KeyNotFoundException, &"Key `{key}` not found")
       else:
         raise newException(KeyNotFoundException, &"Key `{key}` not found in section `{section}`")
-
-  #echo section, "[", key, "] => ", v
   when T is seq:
-    let items = v.split(',')
-    for item in items:
-        when value[0].type is object:
-          value.add(getValue(cfg, value[0].type, "", item))
-        elif value[0].type is string:
-          value.add(convert[value[0].type](item))
-        else:
-          if item.len > 0:
-            value.add(convert[value[0].type](item))
+    var children: seq[string]
+    let len = v.len
+    if len > 0 and v[len-1] == '*':
+      let prefix = v[0..len-2]
+      for key in cfg.keys:
+        if key.startsWith(prefix):
+          children.add(key)
+    else:
+      children = v.split(',')
+    for child in children:
+      when value[0].type is object:
+        value.add(getValue(cfg, value[0].type, "", child))
+      elif value[0].type is string:
+        value.add(child)
+      else:
+        if child.len > 0:
+          value.add(convert[value[0].type](child))
   elif T is object:
     for k, v in value.fieldPairs():
       cfg.getValue(v, key, !k)
