@@ -59,7 +59,6 @@ proc getValue[T](cfg: Config, value: var T, section, key: string)
 proc getValue[T](cfg: Config, t: typedesc[T], section, key: string): T = getValue(cfg, result, section, key)
 
 proc getValue[T](cfg: Config, value: var T, section, key: string) {.compileTime.} =
-  echo "section '", section, "' key ", key
   if section.len == 0:
     if T is object:
       if not cfg.hasKey(key):
@@ -71,7 +70,7 @@ proc getValue[T](cfg: Config, value: var T, section, key: string) {.compileTime.
     if not cfg[section].hasKey(key):
       raise newException(KeyNotFoundException, &"Key `{key}` not found in section `{section}`")
 
-  let v = cfg.getSectionValue(section, key)
+  var v = cfg.getSectionValue(section, key)
   when T is seq:
     var children: seq[string]
     when value[0].type is object:
