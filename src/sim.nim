@@ -6,7 +6,7 @@ type
   SectionNotFoundException* = object of KeyError
 
 
-template value*(x: untyped) {.pragma.}
+template defaultValue*(x: untyped) {.pragma.}
 
 proc `!`(s: string): string {.compileTime.} =
   var first = true
@@ -59,18 +59,19 @@ proc getValue[T](cfg: Config, value: var T, section, key: string)
 proc getValue[T](cfg: Config, t: typedesc[T], section, key: string): T = getValue(cfg, result, section, key)
 
 proc getValue[T](cfg: Config, value: var T, section, key: string) {.compileTime.} =
-  if not cfg.hasKey(section):
-    if section.len == 0:
-      raise newException(KeyNotFoundException, &"Key `{key}` not found in top level")
+  echo "section '", section, "' key ", key
+  if section.len == 0:
+    if T is object:
+      if not cfg.hasKey(key):
+        raise newException(SectionNotFoundException, &"Section `{key}` not found")
     else:
-      raise newException(SectionNotFoundException, &"Section `{section}` not found")
-  let v = cfg.getSectionValue(section, key)
-  when T isnot object:
+      if not cfg[""].hasKey(key):
+        raise newException(KeyNotFoundException, &"Key `{key}` not found in top level section")
+  else:
     if not cfg[section].hasKey(key):
-      if section.len == 0:
-        raise newException(KeyNotFoundException, &"Key `{key}` not found")
-      else:
-        raise newException(KeyNotFoundException, &"Key `{key}` not found in section `{section}`")
+      raise newException(KeyNotFoundException, &"Key `{key}` not found in section `{section}`")
+
+  let v = cfg.getSectionValue(section, key)
   when T is seq:
     var children: seq[string]
     when value[0].type is object:
@@ -105,8 +106,8 @@ proc to*[T](filename: string): T =
     try:
       cfg.getValue(v, "", !k)
     except KeyNotFoundException:
-      when v.hasCustomPragma(value):
-        v = v.getCustomPragmaVal(value)
+      when v.hasCustomPragma(defaultValue):
+        v = v.getCustomPragmaVal(defaultValue)
       else:
         raise
 

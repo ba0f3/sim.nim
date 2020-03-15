@@ -3,8 +3,8 @@ import unittest, sim
 type
   Config = object
     binDir: string
-    etcDir {.value: "/etc".}: string
-    tmpDir {.value: "/tmp".}: string
+    etcDir {.defaultValue: "/etc".}: string
+    tmpDir {.defaultValue: "/tmp".}: string
 
 suite "parse ini":
   var cfg = to[Config]("tests/config4.ini")
