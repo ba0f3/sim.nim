@@ -7,6 +7,7 @@ type
 
 
 template defaultValue*(x: untyped) {.pragma.}
+template ignore*(x: untyped) {.pragma.}
 
 proc `!`(s: string): string {.compileTime.} =
   var first = true
@@ -51,6 +52,9 @@ proc convert[T](s: string): T =
       result = parseInt(s) > 0
   elif T is float:
     result = parseFloat(s)
+  elif T is enum:
+    let val = parseInt(s)
+    result = cast[T](val)
   elif T is string:
     result = s
 
@@ -70,7 +74,7 @@ proc getValue[T](cfg: Config, value: var T, section, key: string) {.compileTime.
     if not cfg[section].hasKey(key):
       raise newException(KeyNotFoundException, &"Key `{key}` not found in section `{section}`")
 
-  var v = cfg.getSectionValue(section, key)
+  var v {.used.} = cfg.getSectionValue(section, key)
   when T is seq:
     var children: seq[string]
     when value[0].type is object:
@@ -102,11 +106,12 @@ proc to*[T](filename: string): T =
   ## Load config from file and convert it to an object
   let cfg = loadConfig(filename)
   for k, v in result.fieldPairs():
-    try:
-      cfg.getValue(v, "", !k)
-    except KeyNotFoundException:
-      when v.hasCustomPragma(defaultValue):
-        v = v.getCustomPragmaVal(defaultValue)
-      else:
-        raise
+    when not v.hasCustomPragma(ignore):
+      try:
+        cfg.getValue(v, "", !k)
+      except KeyNotFoundException:
+        when v.hasCustomPragma(defaultValue):
+          v = v.getCustomPragmaVal(defaultValue)
+        else:
+          raise
 
