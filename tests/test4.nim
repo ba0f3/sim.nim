@@ -5,7 +5,7 @@ type
     binDir: string
     etcDir {.defaultValue: "/etc".}: string
     tmpDir {.defaultValue: "/tmp".}: string
-
+    optDir {.ignore.}: string
 suite "parse ini":
   var cfg = to[Config]("tests/config4.ini")
 

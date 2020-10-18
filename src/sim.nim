@@ -7,7 +7,7 @@ type
 
 
 template defaultValue*(x: untyped) {.pragma.}
-template ignore*(x: untyped) {.pragma.}
+template ignore*() {.pragma.}
 
 proc `!`(s: string): string {.compileTime.} =
   var first = true
