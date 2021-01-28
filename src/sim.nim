@@ -53,8 +53,14 @@ proc convert[T](s: string): T =
   elif T is float:
     result = parseFloat(s)
   elif T is enum:
-    let val = parseInt(s)
-    result = cast[T](val)
+    try:
+      let val = parseInt(s)
+      result = cast[T](val)
+    except ValueError:
+      for k in T.low..<T.high:
+        if $k == s:
+          result = k
+          break
   elif T is string:
     result = s
 

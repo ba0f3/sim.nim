@@ -9,6 +9,14 @@ import unittest, sim
 
 
 type
+  LogLevel = enum
+    DEBUG
+    WARNING
+    INFO
+    ERROR
+    FATAL
+
+
   BoolObject = object
     boolOn: bool
     boolTrue: bool
@@ -24,6 +32,7 @@ type
     floatVal: float
     intSeq: seq[int]
     stringAsBool: BoolObject
+    logLevel*: LogLevel
 
 suite "parse ini":
   var cfg = to[Config]("tests/config1.ini")
@@ -45,3 +54,6 @@ suite "parse ini":
     assert cfg.stringAsBool.boolOff == false
     assert cfg.stringAsBool.boolTrue == true
     assert cfg.stringAsBool.boolFalse == false
+
+  test "parse enum as string":
+    assert cfg.logLevel == DEBUG
