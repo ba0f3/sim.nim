@@ -16,6 +16,10 @@ type
     ERROR
     FATAL
 
+  EnumWithHole = enum
+    START = 0
+    STOP = 2
+
 
   BoolObject = object
     boolOn: bool
@@ -32,7 +36,8 @@ type
     floatVal: float
     intSeq: seq[int]
     stringAsBool: BoolObject
-    logLevel*: LogLevel
+    logLevel: LogLevel
+    enumWithHole: EnumWithHole
 
 suite "parse ini":
   var cfg = to[Config]("tests/config1.ini")
@@ -57,3 +62,5 @@ suite "parse ini":
 
   test "parse enum as string":
     assert cfg.logLevel == DEBUG
+  test "enum with hole":
+    assert cfg.enumWithHole == STOP

@@ -20,7 +20,7 @@ proc `!`(s: string): string {.compileTime.} =
       result.add(c)
     first = false
 
-proc convert[T](s: string): T =
+proc convert[T](s: string): T {.inline.} =
   when T is int:
     result = parseInt(s)
   elif T is uint:
@@ -57,9 +57,9 @@ proc convert[T](s: string): T =
       let val = parseInt(s)
       result = cast[T](val)
     except ValueError:
-      for k in T.low..<T.high:
-        if $k == s:
-          result = k
+      for k in T.low.int..T.high.int:
+        if $k.T == s:
+          result = k.T
           break
   elif T is string:
     result = s
