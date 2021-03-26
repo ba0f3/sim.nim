@@ -68,7 +68,7 @@ proc getValue[T](cfg: Config, value: var T, section, key: string)
 
 proc getValue[T](cfg: Config, t: typedesc[T], section, key: string): T = getValue(cfg, result, section, key)
 
-proc getValue[T](cfg: Config, value: var T, section, key: string) {.compileTime.} =
+proc getValue[T](cfg: Config, value: var T, section, key: string) =
   if section.len == 0:
     if T is object:
       if not cfg.hasKey(key):
@@ -77,8 +77,13 @@ proc getValue[T](cfg: Config, value: var T, section, key: string) {.compileTime.
       if not cfg[""].hasKey(key):
         raise newException(KeyNotFoundException, &"Key `{key}` not found in top level section")
   else:
-    if not cfg[section].hasKey(key):
-      raise newException(KeyNotFoundException, &"Key `{key}` not found in section `{section}`")
+    if T is object:
+      var key = &"{section}/{key}"
+      if not cfg.hasKey(key):
+        raise newException(SectionNotFoundException, &"Section `{key}` not found")
+    else:
+      if not cfg[section].hasKey(key):
+        raise newException(KeyNotFoundException, &"Key `{key}` not found in section `{section}`")
 
   var v {.used.} = cfg.getSectionValue(section, key)
   when T is seq:
@@ -103,6 +108,9 @@ proc getValue[T](cfg: Config, value: var T, section, key: string) {.compileTime.
         if child.len > 0:
           value.add(convert[value[0].type](child))
   elif T is object:
+    var key = key
+    if section.len != 0:
+      key =  &"{section}/{key}"
     for k, v in value.fieldPairs():
       cfg.getValue(v, key, !k)
   else:
