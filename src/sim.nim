@@ -74,7 +74,7 @@ proc getValue[T](cfg: Config, value: var T, section, key: string) =
       if not cfg.hasKey(key):
         raise newException(SectionNotFoundException, &"Section `{key}` not found")
     else:
-      if not cfg[""].hasKey(key):
+      if "" notin cfg or key notin cfg[""]:
         raise newException(KeyNotFoundException, &"Key `{key}` not found in top level section")
   else:
     if T is object:
@@ -82,7 +82,7 @@ proc getValue[T](cfg: Config, value: var T, section, key: string) =
       if not cfg.hasKey(key):
         raise newException(SectionNotFoundException, &"Section `{key}` not found")
     else:
-      if not cfg[section].hasKey(key):
+      if section notin cfg or key notin cfg[section]:
         raise newException(KeyNotFoundException, &"Key `{key}` not found in section `{section}`")
 
   var v {.used.} = cfg.getSectionValue(section, key)
@@ -110,7 +110,7 @@ proc getValue[T](cfg: Config, value: var T, section, key: string) =
   elif T is object:
     var key = key
     if section.len != 0:
-      key =  &"{section}/{key}"
+      key = &"{section}/{key}"
     for k, v in value.fieldPairs():
       cfg.getValue(v, key, !k)
   else:
