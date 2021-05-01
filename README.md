@@ -1,16 +1,29 @@
-Sim [![Build Status](https://travis-ci.org/ba0f3/sim.nim.svg?branch=master)](https://travis-ci.org/ba0f3/sim.nim)
+# Sim 
+
+[![Build Status](https://travis-ci.org/ba0f3/sim.nim.svg?branch=master)](https://travis-ci.org/ba0f3/sim.nim) ![Build Status (github)](https://github.com/ba0f3/sim.nim/workflows/Build/badge.svg) [![made-with-python](https://img.shields.io/badge/Made%20with-Nim-ffc200.svg)](https://nim-lang.org/)
 -------
 
 Sim is an utility that helps you convert a config file (only ini file supported atm) by define an object
 
 Supported types:
-- int64/uint64/int32/uin32/int16/uint16/int8/uint8
+- number
 - float
 - char
 - bool (value can be string like on/off, true/false, and numbers. number less than 1 treated as `false`)
 - string
-- nested object
-- seq (seq of those type above)
+- seq (list of those types above, wildcard supported, like: `"student*"`)
+- multiple level nested objects
+```ini
+[main]
+foo = "foo"
+baz = "baz"
+
+[main/sub]
+foobaz = "foobaz"
+
+[main/sub/level2]
+foobaz = "foobaz2"
+```
 
 **NOTE: config sections and keys must use snake case**
 
