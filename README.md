@@ -1,4 +1,6 @@
-Sim [![Build Status](https://travis-ci.org/ba0f3/sim.nim.svg?branch=master)](https://travis-ci.org/ba0f3/sim.nim)
+# Sim 
+
+[![Build Status](https://travis-ci.org/ba0f3/sim.nim.svg?branch=master)](https://travis-ci.org/ba0f3/sim.nim) ![Build Status (github)](https://github.com/ba0f3/sim.nim/workflows/Build/badge.svg) [![made-with-python](https://img.shields.io/badge/Made%20with-Nim-ffc200.svg)](https://nim-lang.org/)
 -------
 
 Sim is an utility that helps you convert a config file (only ini file supported atm) by define an object
