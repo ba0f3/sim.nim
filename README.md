@@ -6,13 +6,24 @@
 Sim is an utility that helps you convert a config file (only ini file supported atm) by define an object
 
 Supported types:
-- int64/uint64/int32/uin32/int16/uint16/int8/uint8
+- number
 - float
 - char
 - bool (value can be string like on/off, true/false, and numbers. number less than 1 treated as `false`)
 - string
-- nested object
-- seq (seq of those type above)
+- seq (list of those types above, wildcard supported, like: `"student*"`)
+- multiple level nested objects
+```ini
+[main]
+foo = "foo"
+baz = "baz"
+
+[main/sub]
+foobaz = "foobaz"
+
+[main/sub/level2]
+foobaz = "foobaz2"
+```
 
 **NOTE: config sections and keys must use snake case**
 
