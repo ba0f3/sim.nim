@@ -99,7 +99,7 @@ type
     year: int
     students: seq[Student]
 
-var cfg = to[Course]("config.ini")
+var cfg = loadObject[Course]("config.ini")
 echo &"Welcome to `{cfg.name}`, we have cfg.students.len} students registered"
 ```
 
