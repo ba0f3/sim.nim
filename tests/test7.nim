@@ -14,9 +14,9 @@ type
     main: Main
 
 suite "parse ini":
-  var cfg = to[Config]("tests/config7.ini")
+  var cfg = loadObject[Config]("tests/config7.ini")
 
-  test "wildcard seq":
+  test "nested objects":
     assert cfg.main.foo == "foo"
     assert cfg.main.baz == "baz"
     assert cfg.main.sub.foobaz == "foobaz"

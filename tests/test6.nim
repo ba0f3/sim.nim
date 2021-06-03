@@ -8,7 +8,7 @@ type
     server: Server
 
 suite "parse ini":
-  var cfg = to[Config]("tests/config6.ini")
+  var cfg = loadObject[Config]("tests/config6.ini")
 
   test "wildcard seq":
     assert cfg.server.address == "127.0.0.1"

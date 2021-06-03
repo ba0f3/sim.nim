@@ -16,7 +16,7 @@ type
     emptyItemSeq3: seq[int]
     emptyStringItemSeq: seq[string]
 suite "parse ini":
-  var cfg = to[Config]("tests/config3.ini")
+  var cfg = loadObject[Config]("tests/config3.ini")
 
   test "empty seq":
     assert cfg.emptySeq.len == 0

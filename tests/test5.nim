@@ -8,7 +8,7 @@ type
     students: seq[Student]
 
 suite "parse ini":
-  var cfg = to[Config]("tests/config5.ini")
+  var cfg = loadObject[Config]("tests/config5.ini")
 
   test "wildcard seq":
     assert cfg.students.len == 2

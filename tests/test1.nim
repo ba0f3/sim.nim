@@ -40,7 +40,7 @@ type
     enumWithHole: EnumWithHole
 
 suite "parse ini":
-  var cfg = to[Config]("tests/config1.ini")
+  var cfg = loadObject[Config]("tests/config1.ini")
 
   test "parse number":
     assert cfg.intVal == -123456

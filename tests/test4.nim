@@ -7,7 +7,7 @@ type
     tmpDir {.defaultValue: "/tmp".}: string
     optDir {.ignore.}: string
 suite "parse ini":
-  var cfg = to[Config]("tests/config4.ini")
+  var cfg = loadObject[Config]("tests/config4.ini")
 
   test "empty default value":
     assert cfg.binDir == "/bin"

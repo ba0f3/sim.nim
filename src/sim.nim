@@ -1,10 +1,11 @@
-import parsecfg, tables, strutils, strformat, pegs
+import parsecfg, tables, strutils, strformat
 import macros except `!`
 
 type
   KeyNotFoundException* = object of KeyError
   SectionNotFoundException* = object of KeyError
-
+  SectionNameException* = object of KeyError
+  InvalidValueException* = object of ValueError
 
 template defaultValue*(x: untyped) {.pragma.}
 template ignore*() {.pragma.}
@@ -20,112 +21,170 @@ proc `!`(s: string): string {.compileTime.} =
       result.add(c)
     first = false
 
-proc convert[T](s: string): T {.inline.} =
-  when T is int:
-    result = parseInt(s)
-  elif T is uint:
-    result = parseInt(s).uint
-  elif T is int64:
-    result = parseInt(s).int64
-  elif T is uint64:
-    result = parseInt(s).uint64
-  elif T is int32:
-    result = parseInt(s).int32
-  elif T is uint32:
-    result = parseInt(s).uint32
-  elif T is int16:
-    result = parseInt(s).int16
-  elif T is uint16:
-    result = parseInt(s).uint16
-  elif T is int8:
-    result = parseInt(s).int8
-  elif T is uint8:
-    result = parseInt(s).uint8
-  elif T is char:
-    result = s[0]
-  elif T is bool:
-    if s == "on" or s == "true":
-      result = true
-    elif s == "off" or s == "false":
-      result = false
-    else:
-      result = parseInt(s) > 0
-  elif T is float:
-    result = parseFloat(s)
-  elif T is enum:
-    try:
-      let val = parseInt(s)
-      result = cast[T](val)
-    except ValueError:
-      for k in T.low.int..T.high.int:
-        if $k.T == s:
-          result = k.T
-          break
-  elif T is string:
-    result = s
+converter toInt*(s: string): int = parseInt(s)
+converter toInt64*(s: string): int64 = parseInt(s).int64
+converter toInt32*(s: string): int32 = parseInt(s).int32
+converter toInt16*(s: string): int16 = parseInt(s).int16
+converter toInt8*(s: string): int8 = parseInt(s).int8
 
-proc getValue[T](cfg: Config, value: var T, section, key: string)
+converter toUInt*(s: string): uint = parseUInt(s)
+converter toUInt64*(s: string): uint64 = parseUInt(s).uint64
+converter toUInt32*(s: string): uint32 = parseUInt(s).uint32
+converter toUInt16*(s: string): uint16 = parseUInt(s).uint16
+converter toUInt8*(s: string): uint8 = parseUInt(s).uint8
 
-proc getValue[T](cfg: Config, t: typedesc[T], section, key: string): T = getValue(cfg, result, section, key)
+converter toFloat*(s: string): float = parseFloat(s)
+converter toFloat64*(s: string): float64 = parseFloat(s).float64
+converter toFloat32*(s: string): float32 = parseFloat(s).float32
 
-proc getValue[T](cfg: Config, value: var T, section, key: string) =
-  if section.len == 0:
-    if T is object:
-      if not cfg.hasKey(key):
-        raise newException(SectionNotFoundException, &"Section `{key}` not found")
-    else:
-      if not cfg[""].hasKey(key):
-        raise newException(KeyNotFoundException, &"Key `{key}` not found in top level section")
+converter toChar*(s: string): char = result = if s.len > 0: s[0] else: char(0)
+
+converter toByte*(s: string): byte = toChar(s).byte
+
+converter toBool*(s: string): bool =
+  if s[0] == 'o':
+    return s[1] == 'n'
+  elif s[0] == 't' or s[0] == 'T':
+    return true
+  elif s[0] == 'f' or s[0] == 'F':
+    return false
+  try:
+    return parseInt(s) > 0
+  except ValueError:
+    return false
+
+proc toEnum*[T](s: string): T =
+  try:
+    let val = parseInt(s)
+    result = cast[T](val)
+  except ValueError:
+    for k in T.low.int..T.high.int:
+      if $k.T == s:
+        return k.T
+
+template convert[T](s: string): T =
+  when T is enum:
+    toEnum[T](s)
   else:
-    if T is object:
-      var key = &"{section}/{key}"
-      if not cfg.hasKey(key):
-        raise newException(SectionNotFoundException, &"Section `{key}` not found")
-    else:
-      if not cfg[section].hasKey(key):
-        raise newException(KeyNotFoundException, &"Key `{key}` not found in section `{section}`")
+    s
 
-  var v {.used.} = cfg.getSectionValue(section, key)
-  when T is seq:
-    var children: seq[string]
-    when value[0].type is object:
-      let len = v.len
-      if len > 0 and v[len-1] == '*':
-        let prefix = v[0..len-2]
-        for key in cfg.keys:
-          if key.startsWith(prefix):
-            children.add(key)
-      else:
-        children = v.split(',')
+type
+  Section = object
+    name: string
+    inheritFrom: string
+  Sim = object
+    sections: Table[string, Section]
+    cfg: Config
+
+proc getValue[T](sim: Sim, value: var T, section, key: string)
+proc getValue[T](sim: Sim, t: typedesc[T], section, key: string): T = sim.getValue(result, section, key)
+
+proc getSeq[T: seq](sim: Sim, value: var T, section, key: string) =
+  let v = sim.cfg.getSectionValue(section, key)
+  var children: seq[string]
+  when value[0].type is object:
+    let len = v.len
+    if len > 0 and v[len-1] == '*':
+      let prefix = v[0..len-2]
+      for key in sim.cfg.keys:
+        if key.startsWith(prefix):
+          children.add(key)
     else:
       children = v.split(',')
-    for child in children:
-      when value[0].type is object:
-        value.add(getValue(cfg, value[0].type, "", child))
-      elif value[0].type is string:
-        value.add(child)
-      else:
-        if child.len > 0:
-          value.add(convert[value[0].type](child))
-  elif T is object:
-    var key = key
-    if section.len != 0:
-      key =  &"{section}/{key}"
-    for k, v in value.fieldPairs():
-      cfg.getValue(v, key, !k)
   else:
-    value = convert[T](v)
+    children = v.split(',')
+  for child in children:
+    when value[0].type is object:
+      value.add(sim.getValue(value[0].type, "", child))
+    elif value[0].type is string:
+      value.add(child)
+    else:
+      if child.len > 0:
+        value.add(convert[value[0].type](child))
 
-proc to*[T](filename: string): T =
+proc getObj[T: object](sim: Sim, value: var T, section, key: string) =
+  let v = sim.cfg.getSectionValue(section, key)
+  var key = key
+  if section.len != 0:
+    key = &"{section}/{key}"
+
+  for k, v in value.fieldPairs():
+    sim.getValue(v, key, !k)
+
+
+proc getValue[T](sim: Sim, value: var T, section, key: string) =
+  var section = section
+  if section.len == 0:
+    when T is object:
+      if not sim.sections.hasKey(key):
+         raise newException(SectionNotFoundException, &"Section `{key}` not found")
+    else:
+      if "" notin sim.cfg or key notin sim.cfg[""]:
+        raise newException(KeyNotFoundException, &"Key `{key}` not found in top level section")
+  else:
+    when T is object:
+      let name = &"{section}/{key}"
+      if not sim.sections.hasKey(name):
+        raise newException(SectionNotFoundException, &"Section `{name}` not found")
+    else:
+      var s = sim.sections[section]
+      if not sim.cfg[s.name].hasKey(key):
+        while s.inheritFrom.len != 0:
+          section = s.inheritFrom
+          if not sim.cfg.hasKey(section):
+            section = sim.sections[section].name
+          if not sim.cfg[section].hasKey(key):
+            s = sim.sections[section]
+          else:
+            break
+        if not sim.cfg[section].hasKey(key):
+          raise newException(KeyNotFoundException, &"Key `{key}` not found in section `{section}`")
+
+  when T is seq:
+    getSeq(sim, value, section, key)
+  elif T is object:
+    getObj(sim, value, section, key)
+  else:
+    let v = sim.cfg.getSectionValue(section, key)
+    try:
+      value = convert[T](v)
+    except ValueError:
+      raise newException(InvalidValueException, &"Invalid value for key `{key}` in section `{section}`")
+
+proc mapSection(sim: var Sim) =
+  for name in sim.cfg.keys:
+    var section = Section(name: name)
+    if unlikely('.' in name):
+      let parts = name.split('.')
+      if parts.len != 2:
+        raise newException(SectionNameException, &"Multiple inheritance is not supported `{section}`")
+      if parts[0].len == 0 or parts[1].len == 0:
+        raise newException(SectionNameException, &"Part(s) of section name is empty `{section}`")
+      section.inheritFrom = parts[1]
+
+      var alias = Section(
+        name: name,
+        inheritFrom: parts[1]
+        )
+      sim.sections[parts[0]] = alias
+    sim.sections[section.name] = section
+
+proc loadObject*[T](filename: string): T =
   ## Load config from file and convert it to an object
-  let cfg = loadConfig(filename)
+  var sim = Sim(
+    cfg: loadConfig(filename),
+    sections: initTable[string, Section]()
+  )
+  sim.mapSection()
+
   for k, v in result.fieldPairs():
     when not v.hasCustomPragma(ignore):
       try:
-        cfg.getValue(v, "", !k)
+        sim.getValue(v, "", !k)
       except KeyNotFoundException:
         when v.hasCustomPragma(defaultValue):
           v = v.getCustomPragmaVal(defaultValue)
         else:
           raise
 
+proc to*[T](filename: string): T {.deprecated: "Use loadObject instead", inline.} = loadObject[ T](filename)

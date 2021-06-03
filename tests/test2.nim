@@ -19,7 +19,7 @@ type
     students: seq[Student]
 
 suite "parse ini":
-  var cfg = to[Course]("tests/config2.ini")
+  var cfg = loadObject[Course]("tests/config2.ini")
 
   test "top level":
     assert cfg.name == "Nim 101"
