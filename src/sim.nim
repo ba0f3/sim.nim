@@ -114,7 +114,7 @@ proc getObj[T: object](sim: Sim, value: var T, section, key: string = "") =
     when not v.hasCustomPragma(ignore):
       try:
         sim.getValue(v, !k, key)
-      except KeyNotFoundException:
+      except SectionNotFoundException, KeyNotFoundException:
         when v.hasCustomPragma(defaultValue):
           v = v.getCustomPragmaVal(defaultValue)
         else:

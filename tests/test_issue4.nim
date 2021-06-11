@@ -10,6 +10,7 @@ type
     file* {.defaultValue: "file.bin".}: string
     gui*: GuiConfig
 
+
 suite "parse ini":
   var cfg = loadObject[Config]("tests/test_issue4.ini")
 

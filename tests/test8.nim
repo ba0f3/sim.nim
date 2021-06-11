@@ -7,6 +7,6 @@ type
 suite "parse ini":
   test "empty ini file still works and gives meningful exception":
     try:
-      var cfg = loadObject[Config]("tests/config8.ini")
+      var cfg = loadObject[Config]("tests/empty.ini")
     except KeyNotFoundException as e:
       assert e.msg == "Key `data` not found in top level section"
