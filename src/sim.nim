@@ -3,7 +3,9 @@ import macros except `!`
 
 type
   KeyNotFoundException* = object of KeyError
+    ## Raise when non-default key not found in ini file
   SectionNotFoundException* = object of KeyError
+    ## Raise when section not found in ini file
   SectionNameException* = object of KeyError
   InvalidValueException* = object of ValueError
 
@@ -76,8 +78,8 @@ type
     sections: Table[string, Section]
     cfg: Config
 
-proc getValue[T](sim: Sim, value: var T, section, key: string)
-proc getValue[T](sim: Sim, t: typedesc[T], section, key: string): T = sim.getValue(result, section, key)
+proc getValue[T](sim: Sim, value: var T, key: string, section = "")
+proc getValue[T](sim: Sim, t: typedesc[T], key: string, section = ""): T = sim.getValue(result, key, section)
 
 proc getSeq[T: seq](sim: Sim, value: var T, section, key: string) =
   let v = sim.cfg.getSectionValue(section, key)
@@ -95,24 +97,31 @@ proc getSeq[T: seq](sim: Sim, value: var T, section, key: string) =
     children = v.split(',')
   for child in children:
     when value[0].type is object:
-      value.add(sim.getValue(value[0].type, "", child))
+      value.add(sim.getValue(value[0].type, child))
     elif value[0].type is string:
       value.add(child)
     else:
       if child.len > 0:
         value.add(convert[value[0].type](child))
 
-proc getObj[T: object](sim: Sim, value: var T, section, key: string) =
+proc getObj[T: object](sim: Sim, value: var T, section, key: string = "") =
   let v = sim.cfg.getSectionValue(section, key)
   var key = key
   if section.len != 0:
     key = &"{section}/{key}"
 
   for k, v in value.fieldPairs():
-    sim.getValue(v, key, !k)
+    when not v.hasCustomPragma(ignore):
+      try:
+        sim.getValue(v, !k, key)
+      except KeyNotFoundException:
+        when v.hasCustomPragma(defaultValue):
+          v = v.getCustomPragmaVal(defaultValue)
+        else:
+          raise
 
 
-proc getValue[T](sim: Sim, value: var T, section, key: string) =
+proc getValue[T](sim: Sim, value: var T, key: string, section = "") =
   var section = section
   if section.len == 0:
     when T is object:
@@ -176,15 +185,6 @@ proc loadObject*[T](filename: string): T =
     sections: initTable[string, Section]()
   )
   sim.mapSection()
-
-  for k, v in result.fieldPairs():
-    when not v.hasCustomPragma(ignore):
-      try:
-        sim.getValue(v, "", !k)
-      except KeyNotFoundException:
-        when v.hasCustomPragma(defaultValue):
-          v = v.getCustomPragmaVal(defaultValue)
-        else:
-          raise
+  sim.getObj(result)
 
 proc to*[T](filename: string): T {.deprecated: "Use loadObject instead", inline.} = loadObject[ T](filename)
