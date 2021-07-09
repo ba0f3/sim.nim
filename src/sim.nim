@@ -11,6 +11,8 @@ type
 
 template defaultValue*(x: untyped) {.pragma.}
 template ignore*() {.pragma.}
+template parseHook*(x: untyped) {.pragma.}
+
 
 proc `!`(s: string): string {.compileTime.} =
   var first = true
@@ -113,7 +115,13 @@ proc getObj[T: object](sim: Sim, value: var T, section, key: string = "") =
   for k, v in value.fieldPairs():
     when not v.hasCustomPragma(ignore):
       try:
-        sim.getValue(v, !k, key)
+        when v.hasCustomPragma(parseHook):
+          let
+            fn = v.getCustomPragmaVal(parseHook)
+            input = sim.cfg.getSectionValue(key, !k)
+          v = fn(input)
+        else:
+          sim.getValue(v, !k, key)
       except SectionNotFoundException, KeyNotFoundException:
         when v.hasCustomPragma(defaultValue):
           v = v.getCustomPragmaVal(defaultValue)
