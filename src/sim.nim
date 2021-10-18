@@ -107,7 +107,7 @@ proc getSeq[T: seq](sim: Sim, value: var T, section, key: string) =
         value.add(convert[value[0].type](child))
 
 proc getObj[T: object](sim: Sim, value: var T, section, key: string = "") =
-  let v = sim.cfg.getSectionValue(section, key)
+  let v {.used.} = sim.cfg.getSectionValue(section, key)
   var key = key
   if section.len != 0:
     key = &"{section}/{key}"
