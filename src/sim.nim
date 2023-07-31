@@ -1,5 +1,6 @@
 import parsecfg, tables, strutils, strformat
 import macros except `!`
+import std/enumutils
 
 type
   KeyNotFoundException* = object of KeyError
@@ -62,7 +63,7 @@ proc toEnum*[T](s: string): T =
     let val = parseInt(s)
     result = cast[T](val)
   except ValueError:
-    for k in T.low.int..T.high.int:
+    for k in items(T):
       if $k.T == s:
         return k.T
 
@@ -106,7 +107,7 @@ proc getSeq[T: seq](sim: Sim, value: var T, section, key: string) =
       if child.len > 0:
         value.add(convert[value[0].type](child))
 
-proc getObj[T: object](sim: Sim, value: var T, section, key: string = "") =
+proc getObj[T: object](sim: Sim, value: var T, section: string = "", key: string = "") =
   let v {.used.} = sim.cfg.getSectionValue(section, key)
   var key = key
   if section.len != 0:
