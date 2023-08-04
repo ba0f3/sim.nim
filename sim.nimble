@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.2.0"
+version       = "0.2.1"
 author        = "Huy Doan"
 description   = "Parse config by defining an object"
 license       = "MIT"

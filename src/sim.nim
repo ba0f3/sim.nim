@@ -11,6 +11,7 @@ type
   InvalidValueException* = object of ValueError
 
 template defaultValue*(x: untyped) {.pragma.}
+
 template ignore*() {.pragma.}
 template parseHook*(x: untyped) {.pragma.}
 
@@ -78,6 +79,7 @@ type
     name: string
     inheritFrom: string
   Sim = object
+    useSnakeCase: bool
     sections: Table[string, Section]
     cfg: Config
 
@@ -119,10 +121,10 @@ proc getObj[T: object](sim: Sim, value: var T, section: string = "", key: string
         when v.hasCustomPragma(parseHook):
           let
             fn = v.getCustomPragmaVal(parseHook)
-            input = sim.cfg.getSectionValue(key, !k)
+            input = sim.cfg.getSectionValue(key, if sim.useSnakeCase: !k else: k)
           v = fn(input)
         else:
-          sim.getValue(v, !k, key)
+          sim.getValue(v, if sim.useSnakeCase: !k else: k, key)
       except SectionNotFoundException, KeyNotFoundException:
         when v.hasCustomPragma(defaultValue):
           v = v.getCustomPragmaVal(defaultValue)
@@ -187,9 +189,10 @@ proc mapSection(sim: var Sim) =
       sim.sections[parts[0]] = alias
     sim.sections[section.name] = section
 
-proc loadObject*[T](filename: string): T =
+proc loadObject*[T](filename: string, useSnakeCase = true): T =
   ## Load config from file and convert it to an object
   var sim = Sim(
+    useSnakeCase: useSnakeCase,
     cfg: loadConfig(filename),
     sections: initTable[string, Section]()
   )
