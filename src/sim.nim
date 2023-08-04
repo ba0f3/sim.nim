@@ -50,14 +50,11 @@ converter toByte*(s: string): byte = toChar(s).byte
 converter toBool*(s: string): bool =
   if s[0] == 'o':
     return s[1] == 'n'
-  elif s[0] == 't' or s[0] == 'T':
+  elif s[0] == 't' or s[0] == 'T' or s[0] == '1':
     return true
-  elif s[0] == 'f' or s[0] == 'F':
+  elif s[0] == 'f' or s[0] == 'F' or s[0] == '0':
     return false
-  try:
-    return parseInt(s) > 0
-  except ValueError:
-    return false
+  raise new ValueError
 
 proc toEnum*[T](s: string): T =
   try:
@@ -169,7 +166,7 @@ proc getValue[T](sim: Sim, value: var T, key: string, section = "") =
     try:
       value = convert[T](v)
     except ValueError:
-      raise newException(InvalidValueException, &"Invalid value for key `{key}` in section `{section}`")
+      raise newException(InvalidValueException, &"Invalid value for key `{key}` ({v}) in section `{section}`")
 
 proc mapSection(sim: var Sim) =
   for name in sim.cfg.keys:
