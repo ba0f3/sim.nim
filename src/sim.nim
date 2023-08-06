@@ -1,14 +1,15 @@
-import parsecfg, tables, strutils, strformat
+import parsecfg, tables, strutils, strformat, streams
 import macros except `!`
 import std/enumutils
 
 type
-  KeyNotFoundException* = object of KeyError
+  SimParsingException* = object of ValueError
+  KeyNotFoundException* = object of SimParsingException
     ## Raise when non-default key not found in ini file
-  SectionNotFoundException* = object of KeyError
+  SectionNotFoundException* = object of SimParsingException
     ## Raise when section not found in ini file
-  SectionNameException* = object of KeyError
-  InvalidValueException* = object of ValueError
+  SectionNameException* = object of SimParsingException
+  InvalidValueException* = object of SimParsingException
 
 template defaultValue*(x: untyped) {.pragma.}
 
@@ -85,26 +86,32 @@ proc getValue[T](sim: Sim, t: typedesc[T], key: string, section = ""): T = sim.g
 
 proc getSeq[T: seq](sim: Sim, value: var T, section, key: string) =
   let v = sim.cfg.getSectionValue(section, key)
-  var children: seq[string]
-  when value[0].type is object:
-    let len = v.len
-    if len > 0 and v[len-1] == '*':
-      let prefix = v[0..len-2]
-      for key in sim.cfg.keys:
-        if key.startsWith(prefix):
-          children.add(key)
+  if v.len == 0 and sim.sections.hasKey(key):
+    when value[0].type is enum:
+      # Use section keys as enums
+      for k in sim.cfg[key].keys:
+        value.add(convert[value[0].type](k))
+  else:
+    var children: seq[string]
+    when value[0].type is object:
+      let len = v.len
+      if len > 0 and v[len-1] == '*':
+        let prefix = v[0..len-2]
+        for key in sim.cfg.keys:
+          if key.startsWith(prefix):
+            children.add(key)
+      else:
+        children = v.split(',')
     else:
       children = v.split(',')
-  else:
-    children = v.split(',')
-  for child in children:
-    when value[0].type is object:
-      value.add(sim.getValue(value[0].type, child))
-    elif value[0].type is string:
-      value.add(child)
-    else:
-      if child.len > 0:
-        value.add(convert[value[0].type](child))
+    for child in children:
+      when value[0].type is object:
+        value.add(sim.getValue(value[0].type, child))
+      elif value[0].type is string:
+        value.add(child)
+      else:
+        if child.len > 0:
+          value.add(convert[value[0].type](child))
 
 proc getObj[T: object](sim: Sim, value: var T, section: string = "", key: string = "") =
   let v {.used.} = sim.cfg.getSectionValue(section, key)
@@ -137,7 +144,11 @@ proc getValue[T](sim: Sim, value: var T, key: string, section = "") =
          raise newException(SectionNotFoundException, &"Section `{key}` not found")
     else:
       if "" notin sim.cfg or key notin sim.cfg[""]:
-        raise newException(KeyNotFoundException, &"Key `{key}` not found in top level section")
+        when T is seq:
+          if not sim.sections.hasKey(key):
+            raise newException(KeyNotFoundException, &"Key `{key}` not found in top level section")
+        else:
+          raise newException(KeyNotFoundException, &"Key `{key}` not found in top level section")
   else:
     when T is object:
       let name = &"{section}/{key}"
@@ -186,14 +197,21 @@ proc mapSection(sim: var Sim) =
       sim.sections[parts[0]] = alias
     sim.sections[section.name] = section
 
-proc loadObject*[T](filename: string, useSnakeCase = true): T =
+proc loadObject*[T](stream: Stream, useSnakeCase = true, filename = "[stream]"): T =
   ## Load config from file and convert it to an object
   var sim = Sim(
     useSnakeCase: useSnakeCase,
-    cfg: loadConfig(filename),
+    cfg: stream.loadConfig(filename),
     sections: initTable[string, Section]()
   )
   sim.mapSection()
   sim.getObj(result)
+
+proc loadObject*[T](filename: string, useSnakeCase = true): T =
+  let file = open(filename, fmRead)
+  let fileStream = newFileStream(file)
+  defer: fileStream.close()
+  result = loadObject[T](fileStream, useSnakeCase, filename)
+
 
 proc to*[T](filename: string): T {.deprecated: "Use loadObject instead", inline.} = loadObject[ T](filename)
